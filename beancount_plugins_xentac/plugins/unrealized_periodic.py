@@ -143,8 +143,12 @@ def add_unrealized_gains_at_date(entries, unrealized_entries, income_account_typ
         if pnl == ZERO and not latest_unrealized_entry:
             continue
 
+        relative_pnl = pnl
+        if latest_unrealized_entry:
+            relative_pnl = pnl - latest_unrealized_entry.postings[0].units.number
+
         # Create a new transaction to account for this difference in gain.
-        gain_loss_str = "gain" if pnl > ZERO else "loss"
+        gain_loss_str = "gain" if relative_pnl > ZERO else "loss"
         narration = ("Unrealized {} for {h.number} units of {h.currency} "
                      "(price: {h.price_number:.4f} {h.cost_currency} as of {h.price_date}, "
                      "average cost: {h.cost_number:.4f} {h.cost_currency})").format(

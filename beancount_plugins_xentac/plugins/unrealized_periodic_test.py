@@ -162,6 +162,30 @@ class TestUnrealized(unittest.TestCase):
             self.assertEqual(target[1], actual.postings[0].units.number)
 
     @loader.load_doc()
+    def test_relative_gain_loss(self, entries, _, options_map):
+        """
+        2014-01-01 open Assets:Account1
+        2014-01-01 open Income:Misc
+
+        2014-01-15 *
+          Income:Misc           -1000 USD
+          Assets:Account1       10 HOUSE {100 USD}
+
+        2014-01-15 price HOUSE  100 USD
+        2014-01-20 price HOUSE  150 USD ; Actual gain/Relative gain
+        2014-02-25 price HOUSE  140 USD ; Actual gain/Relative loss
+        2014-03-25 price HOUSE  50 USD  ; Actual loss/Relative loss
+        2014-04-25 price HOUSE  70 USD  ; Actual loss/Relative gain
+        """
+        new_entries, _ = unrealized_periodic.add_unrealized_gains(entries, options_map)
+        unreal_entries = unrealized_periodic.get_unrealized_entries(new_entries)
+        self.assertEqual(4, len(unreal_entries))
+        for target, actual in zip(
+                ['gain', 'loss', 'loss', 'gain'],
+                unreal_entries):
+            self.assertTrue(actual.narration.startswith('Unrealized ' + target))
+
+    @loader.load_doc()
     def test_all_unrealized_realized(self, entries, _, options_map):
         """
         2014-01-01 open Assets:Account1
