@@ -250,20 +250,18 @@ def add_unrealized_gains(entries, options_map, subaccount=None):
 
         if last_holdings_with_currencies:
             for account_, cost_currency, currency in last_holdings_with_currencies - holdings_with_currencies:
-                # TODO: Create a negation transaction specifically to mark that all gains have been realized
+                # Create a negation transaction specifically to mark that all gains have been realized
+                if subaccount:
+                    account_ = account.join(account_, subaccount)
+
                 latest_unrealized_entry = find_previous_unrealized_transaction(new_entries, account_, cost_currency, currency)
                 if not latest_unrealized_entry:
                     continue
                 entry = data.Transaction(data.new_metadata(meta["filename"], lineno=999,
                                          kvlist={'prev_currency': currency}), date,
-                                         flags.FLAG_UNREALIZED, None, 'All unrealized transactions are realized', None, None, [])
+                                         flags.FLAG_UNREALIZED, None, 'Clear unrealized gains/losses of {}'.format(currency), None, None, [])
 
-                # Book this as income, converting the account name to be the same, but as income.
-                # Note: this is a rather convenient but arbitraty choice--maybe it would be best to
-                # let the user decide to what account to book it, but I don't a nice way to let the
-                # user specify this.
-                #
-                # Note: we never set a price because we don't want these to end up in Conversions.
+                # Negate the previous transaction because of unrealized gains are now 0
                 for posting in latest_unrealized_entry.postings[:2]:
                     entry.postings.append(
                         data.Posting(

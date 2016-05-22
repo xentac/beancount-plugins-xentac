@@ -7,8 +7,10 @@ from beancount_plugins_xentac.plugins import unrealized_periodic
 from beancount.core.number import D
 from beancount.core.number import ZERO
 from beancount.core import data
+from beancount.core import inventory
 from beancount.parser import options
 from beancount.ops import validation
+from beancount.ops import summarize
 from beancount import loader
 
 
@@ -184,6 +186,37 @@ class TestUnrealized(unittest.TestCase):
                 ['gain', 'loss', 'loss', 'gain'],
                 unreal_entries):
             self.assertTrue(actual.narration.startswith('Unrealized ' + target))
+
+    @loader.load_doc()
+    def test_change_commodity_subaccount(self, entries, _, options_map):
+        """
+        2014-01-01 open Assets:Account1
+        2014-01-01 open Income:Misc
+        2014-01-01 open Income:Pnl
+
+        2014-01-15 *
+          Income:Misc           -1000 USD
+          Assets:Account1       10 HOUSE {100 USD}
+
+        2014-01-15 price HOUSE  100 USD
+        2014-01-20 price HOUSE  125 USD
+        2014-02-05 price HOUSE  150 USD
+
+        2014-02-15 *
+          Assets:Account1      -10 HOUSE {100 USD}
+          Assets:Account1       30 CAR {50 USD}
+          Income:Pnl           -500 USD
+        2014-02-15 price CAR  50 USD
+        2014-02-20 price CAR  100 USD
+        """
+        new_entries, _ = unrealized_periodic.add_unrealized_gains(entries, options_map, subaccount='Unrealized')
+        unreal_entries = unrealized_periodic.get_unrealized_entries(new_entries)
+        self.assertEqual(3, len(unreal_entries))
+        self.assertEqual(2, len(unreal_entries[-2].postings))  # The second to last transaction zeroed the account
+        self.assertEqual(2, len(unreal_entries[-1].postings))  # The last transaction added the new unrealized gain
+        summary = summarize.balance_by_account(unreal_entries)
+        self.assertEqual(summary[0]['Assets:Account1:Unrealized'], inventory.Inventory.from_string("1500 USD"))
+
 
     @loader.load_doc()
     def test_all_unrealized_realized(self, entries, _, options_map):
