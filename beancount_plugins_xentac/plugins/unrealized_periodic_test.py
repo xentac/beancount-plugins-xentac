@@ -217,7 +217,6 @@ class TestUnrealized(unittest.TestCase):
         summary = summarize.balance_by_account(unreal_entries)
         self.assertEqual(summary[0]['Assets:Account1:Unrealized'], inventory.Inventory.from_string("1500 USD"))
 
-
     @loader.load_doc()
     def test_all_unrealized_realized(self, entries, _, options_map):
         """
@@ -245,6 +244,45 @@ class TestUnrealized(unittest.TestCase):
         self.assertEqual(2, len(unreal_entries))
         for target, actual in zip(
                 [(None, D('200')), (None, D('-200'))],
+                unreal_entries):
+            if target[0] is not None:
+                self.assertEqual(target[0], actual.postings[2].units.number)
+            self.assertEqual(target[1], actual.postings[0].units.number)
+
+    @loader.load_doc()
+    def test_clear_then_new(self, entries, _, options_map):
+        """
+        2014-01-01 open Assets:Account1
+        2014-01-01 open Assets:Cash
+        2014-01-01 open Income:Misc
+        2014-01-01 open Income:PnL
+
+        2014-01-15 *
+          Income:Misc           -1000 USD
+          Assets:Account1       10 HOUSE {100 USD}
+
+        2014-01-15 price HOUSE  100 USD
+        2014-01-20 price HOUSE  120 USD
+
+        2014-02-10 *
+          Assets:Cash           3000 USD
+          Assets:Account1       -10 HOUSE {100 USD}
+          Income:PnL            -2000 USD
+
+        2014-03-15 *
+          Income:Misc           -1000 USD
+          Assets:Account1       10 HOUSE {100 USD}
+
+        2014-03-15 price HOUSE  100 USD
+        2014-04-15 price HOUSE  120 USD
+
+        """
+        # We should have a profit, then clear, then profit
+        new_entries, _ = unrealized_periodic.add_unrealized_gains(entries, options_map)
+        unreal_entries = unrealized_periodic.get_unrealized_entries(new_entries)
+        self.assertEqual(3, len(unreal_entries))
+        for target, actual in zip(
+                [(None, D('200')), (None, D('-200')), (None, D('200'))],
                 unreal_entries):
             if target[0] is not None:
                 self.assertEqual(target[0], actual.postings[2].units.number)

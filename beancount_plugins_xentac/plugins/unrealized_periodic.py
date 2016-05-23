@@ -44,9 +44,11 @@ def matching_unrealized_transaction(entry, account, cost_currency, prev_currency
             entry.meta['prev_currency'] == prev_currency)
 
 
-def find_previous_unrealized_transaction(entries, account, cost_currency, prev_currency):
+def find_previous_unrealized_transaction(entries, account, cost_currency, prev_currency, include_clear=False):
     for entry in reversed(entries):
         if matching_unrealized_transaction(entry, account, cost_currency, prev_currency):
+            if not include_clear and entry.narration.startswith('Clear unrealized'):
+                return None
             return entry
     return None
 
