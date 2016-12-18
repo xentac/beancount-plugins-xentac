@@ -157,7 +157,7 @@ def add_unrealized_gains_at_date(entries, unrealized_entries, income_account_typ
                          gain_loss_str, h=holding)
         entry = data.Transaction(data.new_metadata(meta["filename"], lineno=1000 + index,
                                  kvlist={'prev_currency': holding.currency}), date,
-                                 flags.FLAG_UNREALIZED, None, narration, None, None, [])
+                                 flags.FLAG_UNREALIZED, None, narration, set(), set(), [])
 
         # Book this as income, converting the account name to be the same, but as income.
         # Note: this is a rather convenient but arbitraty choice--maybe it would be best to
@@ -261,7 +261,7 @@ def add_unrealized_gains(entries, options_map, subaccount=None):
                     continue
                 entry = data.Transaction(data.new_metadata(meta["filename"], lineno=999,
                                          kvlist={'prev_currency': currency}), date,
-                                         flags.FLAG_UNREALIZED, None, 'Clear unrealized gains/losses of {}'.format(currency), None, None, [])
+                                         flags.FLAG_UNREALIZED, None, 'Clear unrealized gains/losses of {}'.format(currency), set(), set(), [])
 
                 # Negate the previous transaction because of unrealized gains are now 0
                 for posting in latest_unrealized_entry.postings[:2]:
